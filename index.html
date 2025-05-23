@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Panel Image Finder Pro (Global Sort)</title>
+    <style>
+        :root {
+            --primary-color: #007bff; /* Blue */
+            --secondary-color: #fd7e14; /* Orange */
+            --light-bg: #f8f9fa;
+            --dark-text: #343a40;
+            --light-text: #ffffff;
+            --border-color: #dee2e6;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--light-text);
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+
+        .api-keys-section, .search-form {
+            background-color: var(--light-text);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .api-keys-section h2 {
+            margin-top:0;
+            color: var(--primary-color);
+        }
+        .api-keys-section p {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .api-keys-section .form-group { margin-bottom: 15px; }
+
+
+        .search-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .search-button {
+            background-color: var(--secondary-color);
+            color: var(--light-text);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            height: 48px; /* Align with input height */
+            grid-column: 1 / -1; /* Make button span full width on smaller grids */
+        }
+         @media (min-width: 670px) { /* Adjust breakpoint as needed for form layout */
+            .search-form { grid-template-columns: repeat(4, 1fr) auto; } /* 4 inputs + button */
+            .search-button { grid-column: auto; }
+        }
+
+
+        .search-button:hover {
+            background-color: #e66a00; /* Darker orange */
+        }
+
+        .google-link-container {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+
+        .google-link-container a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .google-link-container a:hover {
+            text-decoration: underline;
+        }
+        
+        #infoMessage {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: none; /* Hidden by default */
+        }
+        #infoMessage.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
+        #infoMessage.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
+        #infoMessage.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;}
+
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .grid-item {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            background-color: #e9ecef; /* Placeholder bg */
+            display: flex; /* For image centering if needed */
+            flex-direction: column;
+            justify-content: center; /* Center image vertically */
+        }
+         .grid-item .score-display {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 0.7em;
+            padding: 2px 4px;
+            text-align: center;
+            z-index: 5;
+            opacity: 0.7;
+        }
+
+
+        .grid-item img {
+            width: 100%;
+            height: 150px; /* Fixed height for consistency */
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .grid-item:hover img {
+            transform: scale(1.05);
+        }
+
+        .download-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+            cursor: pointer; /* Indicate it's clickable */
+        }
+
+        .grid-item:hover .download-btn {
+            opacity: 1;
+        }
+
+        /* Lightbox styles */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .lightbox-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 80vh;
+            object-fit: contain; /* Ensure whole image is visible */
+        }
+
+        .lightbox-close, .lightbox-prev, .lightbox-next {
+            position: absolute;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .lightbox-close { top: 15px; right: 35px; font-size: 40px; }
+        .lightbox-prev, .lightbox-next {
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 16px;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .lightbox-prev:hover, .lightbox-next:hover { background-color: rgba(255,255,255,0.2); }
+        .lightbox-prev { left: 15px; }
+        .lightbox-next { right: 15px; }
+
+        .lightbox-download {
+            display: block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: var(--secondary-color);
+            color: var(--light-text);
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .lightbox-download:hover { background-color: #e66a00; }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.5em; }
+            .api-keys-section { padding: 15px; }
+            .search-form { grid-template-columns: 1fr; }
+            .search-button { grid-column: 1 / -1; /* Ensure full width on mobile */ }
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+            .grid-item img { height: 120px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>LED Panel Image Finder Pro (Global Sort)</h1>
+    </header>
+
+    <div class="container">
+        <div class="api-keys-section">
+            <h2>API Keys (Optional)</h2>
+            <p>Giphy API Key is pre-configured. For Unsplash (photos based on search term), enter your API key below.
+                <br><a href="https://unsplash.com/developers" target="_blank">Get Unsplash Key</a>
+            </p>
+            <div class="form-group">
+                <label for="unsplashApiKey">Unsplash Access Key (for Photos):</label>
+                <input type="text" id="unsplashApiKey" placeholder="Enter your Unsplash Access Key">
+            </div>
+        </div>
+
+        <form id="searchForm" class="search-form">
+            <div class="form-group">
+                <label for="pixelWidth">Panel Width (px):</label>
+                <input type="number" id="pixelWidth" value="192">
+            </div>
+            <div class="form-group">
+                <label for="pixelHeight">Panel Height (px):</label>
+                <input type="number" id="pixelHeight" value="192">
+            </div>
+            <div class="form-group">
+                <label for="imageFormat">Format:</label>
+                <select id="imageFormat">
+                    <option value="gif">.gif (Uses Giphy)</option>
+                    <option value="png">.png (Uses Unsplash if key provided)</option>
+                    <option value="jpg">.jpeg/.jpg (Uses Unsplash if key provided)</option>
+                    <option value="">Any (Photos - Uses Unsplash if key provided)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="searchTerm">Search Term:</label>
+                <input type="text" id="searchTerm" placeholder="e.g., abstract patterns" required>
+            </div>
+            <button type="submit" class="search-button">Search & Display</button>
+        </form>
+
+        <div id="googleLinkContainer" class="google-link-container" style="display: none;">
+            <p><strong>Direct Google Search Link:</strong> <a id="googleSearchLink" href="#" target="_blank"></a></p>
+        </div>
+        
+        <div id="infoMessage"></div>
+
+        <div id="imageGrid" class="image-grid">
+            <!-- Images will be loaded here -->
+        </div>
+        <div id="loadingIndicator" style="text-align: center; padding: 20px; display: none;">
+            Loading more images...
+        </div>
+    </div>
+
+    <!-- Lightbox Structure -->
+    <div id="lightbox" class="lightbox">
+        <span class="lightbox-close">×</span>
+        <img class="lightbox-content" id="lightboxImg" alt="Enlarged image">
+        <a href="#" class="lightbox-prev" title="Previous">❮</a>
+        <a href="#" class="lightbox-next" title="Next">❯</a>
+        <a id="lightboxDownload" class="lightbox-download">Download Image</a>
+    </div>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const googleLinkContainer = document.getElementById('googleLinkContainer');
+        const googleSearchLink = document.getElementById('googleSearchLink');
+        const imageGrid = document.getElementById('imageGrid');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const infoMessageDiv = document.getElementById('infoMessage');
+
+        const GIPHY_API_KEY_HARDCODED = "Mbav1iKrxy4s4WSJ7MzaMhXsEom0J0Gr"; 
+        
+        const unsplashApiKeyInput = document.getElementById('unsplashApiKey');
+
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const lightboxClose = document.querySelector('.lightbox-close');
+        const lightboxPrev = document.querySelector('.lightbox-prev');
+        const lightboxNext = document.querySelector('.lightbox-next');
+        const lightboxDownload = document.getElementById('lightboxDownload');
+
+        let currentImageIndex = 0;
+        let displayedImages = []; // This will hold ALL fetched images, globally sorted
+        let currentPage = 1; // For Unsplash/Placeholder pagination
+        let giphyOffset = 0; // Specific for Giphy pagination
+        let isLoading = false;
+        let currentSearchQuery = {};
+        let UNSPLASH_API_KEY = '';
+        const GIPHY_FETCH_LIMIT = 50; 
+        const UNSPLASH_FETCH_LIMIT = 20; // How many Unsplash images to fetch per scroll
+
+        function showMessage(message, type = 'info') {
+            infoMessageDiv.textContent = message;
+            infoMessageDiv.className = type;
+            infoMessageDiv.style.display = 'block';
+        }
+        function hideMessage() {
+            infoMessageDiv.style.display = 'none';
+        }
+
+        async function forceDownload(imageUrl, filename) {
+            try {
+                const response = await fetch(imageUrl);
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                showMessage(`Successfully downloaded ${filename}`, 'success');
+            } catch (error) {
+                console.error('Download failed:', error);
+                showMessage(`Download failed for ${filename}. Image might be protected or server doesn't allow cross-origin. Try right-click > Save As. Error: ${error.message}`, 'error');
+            }
+        }
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            hideMessage();
+            const width = parseInt(document.getElementById('pixelWidth').value, 10);
+            const height = parseInt(document.getElementById('pixelHeight').value, 10);
+            const format = document.getElementById('imageFormat').value;
+            const term = document.getElementById('searchTerm').value.trim();
+
+            if (!term && (format === 'gif' || format !== '')) {
+                showMessage('Please enter a search term for API-based results.', 'warning');
+            }
+            
+            UNSPLASH_API_KEY = unsplashApiKeyInput.value.trim();
+            currentSearchQuery = { width, height, format, term };
+
+            let googleQuery = encodeURIComponent(term);
+            if (width && height) {
+                googleQuery += `+imagesize:${width}x${height}`;
+            }
+            if (format) {
+                googleQuery += `+filetype:${format}`;
+            }
+
+            const fullGoogleLink = `https://www.google.com/search?tbm=isch&q=${googleQuery}`;
+            googleSearchLink.href = fullGoogleLink;
+            googleSearchLink.textContent = fullGoogleLink;
+            googleLinkContainer.style.display = 'block';
+
+            // Reset for new search
+            displayedImages = []; 
+            currentPage = 1; 
+            giphyOffset = 0; 
+            imageGrid.innerHTML = ''; // Clear grid for new search
+            loadImages();
+        });
+
+        function scoreGiphyRendition(rendition, targetW, targetH) {
+            const rendW = parseInt(rendition.width, 10);
+            const rendH = parseInt(rendition.height, 10);
+            if (!rendW || !rendH || rendW === 0 || rendH === 0) return { score: -Infinity, rendition: null }; // Invalid rendition
+
+            let score = 0;
+            const targetAspect = targetW / targetH;
+            const rendAspect = rendW / rendH;
+
+            const aspectDifference = Math.abs(targetAspect - rendAspect);
+            
+            const widthDiffPercent = Math.abs(rendW - targetW) / targetW;
+            const heightDiffPercent = Math.abs(rendH - targetH) / targetH;
+            
+            if (rendW === targetW && rendH === targetH) {
+                score += 100000;
+            }
+
+            if (aspectDifference < 0.02) { 
+                score += 50000;
+            } else if (aspectDifference < 0.1) { 
+                score += 20000;
+            } else if (aspectDifference < 0.25) { 
+                score += 5000;
+            } else {
+                score -= 10000; 
+            }
+            
+            if (rendW >= targetW && rendH >= targetH) {
+                score += 10000;
+                score -= ( (rendW - targetW) + (rendH - targetH) ) * 10; 
+            } else {
+                score -= ( (targetW - rendW > 0 ? targetW - rendW : 0) + (targetH - rendH > 0 ? targetH - rendH : 0) ) * 20;
+            }
+
+            if (aspectDifference < 0.1) {
+                 if ( (widthDiffPercent > 0.5 && heightDiffPercent < 0.1) || (heightDiffPercent > 0.5 && widthDiffPercent < 0.1) ) {
+                    score -= 5000; 
+                 }
+            }
+            return { score, rendition, width: rendW, height: rendH, url: rendition.url };
+        }
+
+        // Function to render the entire grid from `displayedImages`
+        function renderGrid() {
+            imageGrid.innerHTML = ''; // Clear existing grid
+            const { format } = currentSearchQuery;
+
+            // For non-Giphy, we assign a default high score so they appear,
+            // or if Giphy, only those with a score are relevant.
+            // If mixing sources, a more unified scoring would be needed.
+            // For now, Giphy has scores, others are treated as "good enough" if returned by API.
+            const imagesToDisplay = displayedImages.filter(img => img.type === 'gif' ? (img.score !== undefined && img.score > -100000) : true);
+
+            imagesToDisplay.forEach((imgData, index) => { // Use index from sorted array
+                const gridItem = document.createElement('div');
+                gridItem.classList.add('grid-item');
+                gridItem.dataset.index = index; // Update index based on current position in sorted array
+
+                const img = document.createElement('img');
+                img.src = imgData.thumbnailUrl;
+                img.alt = `${imgData.term} - ${imgData.type}`;
+                img.onerror = () => { img.src = 'https://via.placeholder.com/150?text=Error'; } 
+                
+                img.addEventListener('click', () => openLightbox(parseInt(gridItem.dataset.index)));
+
+                const downloadBtn = document.createElement('span');
+                downloadBtn.classList.add('download-btn');
+                downloadBtn.textContent = '↓';
+                downloadBtn.title = 'Download Image';
+                downloadBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const filename = `${imgData.term.replace(/\s+/g, '_') || 'image'}_${imgData.id}.${imgData.type.startsWith('gif') ? 'gif' : (format || 'jpg')}`;
+                    forceDownload(imgData.originalUrl, filename);
+                });
+
+                gridItem.appendChild(img);
+                gridItem.appendChild(downloadBtn);
+                
+                if (imgData.score !== undefined && imgData.type === 'gif') { // Display score for Giphy results
+                    const scoreDisplay = document.createElement('div');
+                    scoreDisplay.classList.add('score-display');
+                    scoreDisplay.textContent = `Score: ${imgData.score.toFixed(0)} ${imgData.renditionInfo || ''}`;
+                    gridItem.appendChild(scoreDisplay);
+                }
+                imageGrid.appendChild(gridItem);
+            });
+        }
+
+
+        async function loadImages() {
+            if (isLoading) return;
+            isLoading = true;
+            loadingIndicator.style.display = 'block';
+            // Don't hide message immediately, might be "no more results"
+            // hideMessage(); 
+
+            const { width: targetW, height: targetH, format, term } = currentSearchQuery;
+            let newImagesData = [];
+            let sourceUsed = "placeholder";
+            let apiReachedEnd = false;
+
+            try {
+                if (format === 'gif' && term && GIPHY_API_KEY_HARDCODED) {
+                    sourceUsed = "Giphy";
+                    const giphyUrl = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY_HARDCODED}&q=${encodeURIComponent(term)}&limit=${GIPHY_FETCH_LIMIT}&offset=${giphyOffset}&rating=g&lang=en`;
+                    const response = await fetch(giphyUrl);
+                    if (!response.ok) throw new Error(`Giphy API error: ${response.status} ${response.statusText}`);
+                    const data = await response.json();
+                    
+                    if (data.data && data.data.length > 0) {
+                        giphyOffset += GIPHY_FETCH_LIMIT;
+                        const processedGifs = data.data.map(gif => {
+                            let bestRendition = { score: -Infinity, renditionDetails: null };
+                            const renditionKeys = ['fixed_width', 'fixed_height', 'fixed_width_downsampled', 'fixed_height_downsampled', 'downsized_medium', 'downsized_large', 'original'];
+                            for (const key of renditionKeys) {
+                                if (gif.images[key]) {
+                                    const currentScoreInfo = scoreGiphyRendition(gif.images[key], targetW, targetH);
+                                    if (currentScoreInfo.score > bestRendition.score) {
+                                        bestRendition = {
+                                            score: currentScoreInfo.score,
+                                            renditionDetails: { url: currentScoreInfo.url, width: currentScoreInfo.width, height: currentScoreInfo.height }
+                                        };
+                                    }
+                                }
+                            }
+                            if (bestRendition.score === -Infinity && gif.images.original) { // Fallback scoring for original
+                                const originalScoreInfo = scoreGiphyRendition(gif.images.original, targetW, targetH);
+                                bestRendition = { score: originalScoreInfo.score, renditionDetails: {url: originalScoreInfo.url, width: originalScoreInfo.width, height: originalScoreInfo.height }};
+                            }
+
+                            return {
+                                id: gif.id, title: gif.title, originalGiphyUrl: gif.images.original.url,
+                                bestRendition: bestRendition.renditionDetails, score: bestRendition.score,
+                                type: 'gif', term: term
+                            };
+                        }).filter(gif => gif.bestRendition && gif.score > -100000); // Basic filter
+
+                        newImagesData = processedGifs.map(sg => ({
+                            thumbnailUrl: sg.bestRendition.url, originalUrl: sg.originalGiphyUrl, type: 'gif',
+                            term: sg.term, id: sg.id, score: sg.score,
+                            renditionInfo: `(${sg.bestRendition.width}x${sg.bestRendition.height})`
+                        }));
+                    } else {
+                        apiReachedEnd = true;
+                        if(displayedImages.filter(img => img.type === 'gif').length === 0) { // No Giphy images displayed yet
+                             showMessage(`No GIFs found from ${sourceUsed} for "${term}".`, 'info');
+                        } else {
+                             showMessage(`No more GIFs found from ${sourceUsed} for "${term}".`, 'info');
+                        }
+                    }
+                } else if (format !== 'gif' && term && UNSPLASH_API_KEY) {
+                    sourceUsed = "Unsplash";
+                    const unsplashUrl = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(term)}&client_id=${UNSPLASH_API_KEY}&per_page=${UNSPLASH_FETCH_LIMIT}&page=${currentPage}&w=${targetW || 200}&h=${targetH || 200}&fit=crop`;
+                    const response = await fetch(unsplashUrl);
+                    if (!response.ok) throw new Error(`Unsplash API error: ${response.status} ${response.statusText}`);
+                    const data = await response.json();
+
+                    if (data.results && data.results.length > 0) {
+                        currentPage++;
+                        newImagesData = data.results.map(photo => ({
+                            thumbnailUrl: `${photo.urls.raw}&w=${targetW || 200}&h=${targetH || 200}&fit=crop&fm=jpg&q=80`,
+                            originalUrl: photo.urls.raw + `&fm=jpg&q=90&w=${Math.min(targetW || 1920, 1920)}&h=${Math.min(targetH||1080, 1080)}&fit=max`,
+                            type: 'photo', term: term, id: photo.id,
+                            score: 50000 // Default high score for non-Giphy to ensure they are shown if Giphy is also used
+                        }));
+                    } else {
+                        apiReachedEnd = true;
+                         if(displayedImages.filter(img => img.type === 'photo').length === 0) {
+                             showMessage(`No photos found from ${sourceUsed} for "${term}".`, 'info');
+                        } else {
+                             showMessage(`No more photos found from ${sourceUsed} for "${term}".`, 'info');
+                        }
+                    }
+                } else { // Placeholder
+                    sourceUsed = "Picsum.photos (Placeholder)";
+                    if (displayedImages.length < 100) { // Limit placeholders to avoid infinite scroll of them
+                        for (let i = 0; i < UNSPLASH_FETCH_LIMIT; i++) {
+                            const uniqueSeed = Date.now() + i + Math.random();
+                            const placeholderUrl = `https://picsum.photos/seed/${uniqueSeed}/${targetW || 200}/${targetH || 200}`;
+                            newImagesData.push({
+                                thumbnailUrl: placeholderUrl, originalUrl: placeholderUrl,
+                                type: format === 'gif' ? 'gif-placeholder' : 'photo-placeholder',
+                                term: 'placeholder', id: uniqueSeed,
+                                score: format === 'gif' ? 0 : 50000 // Score placeholders lower if mixed with Giphy
+                            });
+                        }
+                    } else {
+                        apiReachedEnd = true;
+                        showMessage("Reached placeholder limit.", "info");
+                    }
+                     if (term && ( (format === 'gif' && !GIPHY_API_KEY_HARDCODED) || (format !== 'gif' && !UNSPLASH_API_KEY) )) {
+                         showMessage(`API Key missing. Showing placeholders. Search term "${term}" not used for placeholders.`, 'warning');
+                    } else if (!term && displayedImages.length === 0) { // Only show if it's the first load
+                        showMessage(`No search term. Showing random placeholders.`, 'info');
+                    }
+                }
+
+                if (newImagesData.length > 0) {
+                    // Add new images and re-sort the entire displayedImages array
+                    // Prevent duplicates by ID
+                    newImagesData.forEach(newItem => {
+                        if (!displayedImages.find(existingItem => existingItem.id === newItem.id)) {
+                            displayedImages.push(newItem);
+                        }
+                    });
+
+                    // Sort globally: Giphy by score, others typically high enough to appear.
+                    // If mixing sources, this sort needs to be robust for all types.
+                    // For now, this prioritizes Giphy's detailed scoring.
+                    displayedImages.sort((a, b) => (b.score || 0) - (a.score || 0));
+                    
+                    renderGrid(); // Re-render the entire grid with sorted images
+                    if(apiReachedEnd && newImagesData.length > 0) {
+                        // If API said end but we still added (e.g. last page had items), don't show "no more" yet
+                    } else if (!apiReachedEnd) {
+                        hideMessage(); // Hide "no more" if we successfully loaded new ones
+                    }
+                } else if (!apiReachedEnd && displayedImages.length === 0) { // No results at all on first try
+                    showMessage(`No results found from ${sourceUsed} for "${term}".`, 'info');
+                }
+
+
+            } catch (error) {
+                console.error("Error loading images:", error);
+                showMessage(`Error: ${error.message}. Check console for details.`, 'error');
+            } finally {
+                isLoading = false;
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+
+        window.addEventListener('scroll', () => {
+            // Check if there's content and if user scrolled near bottom
+            if (document.body.scrollHeight > window.innerHeight && // only if scrollbar exists
+                (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 300 && 
+                !isLoading) {
+                // Avoid loading if a message indicates API reached end or no term for API search
+                const currentInfoMsg = infoMessageDiv.textContent || "";
+                if (currentInfoMsg.includes("No more") || currentInfoMsg.includes("API Key missing") || (currentInfoMsg.includes("No search term") && !(currentSearchQuery.format === 'gif' || currentSearchQuery.format !== ''))) {
+                    // Do not attempt to load more if these messages are shown
+                } else {
+                    loadImages();
+                }
+            }
+        });
+
+        function openLightbox(index) {
+            // The index is now relative to the currently rendered (and sorted) displayedImages array
+            if (index < 0 || index >= displayedImages.length) return;
+            currentImageIndex = index; // This index is critical for prev/next
+            const imgData = displayedImages[index];
+
+            if (!imgData) { // Safety check
+                console.error("Image data not found for lightbox at index:", index);
+                return;
+            }
+
+            lightboxImg.src = imgData.originalUrl;
+            lightboxImg.alt = `${imgData.term} - ${imgData.type} (Large View)`;
+            
+            lightboxDownload.onclick = (e) => {
+                e.preventDefault();
+                const filename = `${imgData.term.replace(/\s+/g, '_') || 'image'}_${imgData.id}.${imgData.type.startsWith('gif') ? 'gif' : (currentSearchQuery.format || 'jpg')}`;
+                forceDownload(imgData.originalUrl, filename);
+            };
+
+            lightbox.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            lightboxPrev.style.display = (index === 0) ? 'none' : 'block';
+            // For next button, allow if not last or if more can be loaded (Giphy/Unsplash still have pages)
+            const canLoadMore = (currentSearchQuery.format === 'gif' && GIPHY_API_KEY_HARDCODED) || 
+                                (currentSearchQuery.format !== 'gif' && UNSPLASH_API_KEY && currentSearchQuery.term);
+            lightboxNext.style.display = (index === displayedImages.length - 1 && !canLoadMore) ? 'none' : 'block';
+        }
+
+        lightboxClose.onclick = () => {
+            lightbox.style.display = 'none';
+            lightboxImg.src = "";
+            document.body.style.overflow = 'auto';
+        };
+
+        lightboxPrev.onclick = (e) => { e.preventDefault(); openLightbox(currentImageIndex - 1); };
+        
+        lightboxNext.onclick = (e) => { 
+            e.preventDefault(); 
+            if (currentImageIndex === displayedImages.length -1 && !isLoading) {
+                const currentInfoMsg = infoMessageDiv.textContent || "";
+                if (currentInfoMsg.includes("No more") ) { // Don't try if API said no more
+                    openLightbox(currentImageIndex); // Stay on current
+                    return;
+                }
+                // Try loading more, then advance if successful
+                loadImages().then(() => {
+                    if(currentImageIndex < displayedImages.length - 1) {
+                        openLightbox(currentImageIndex + 1);
+                    } else {
+                        openLightbox(currentImageIndex); // Stay if no new images loaded
+                    }
+                });
+            } else {
+                openLightbox(currentImageIndex + 1);
+            }
+        };
+
+        document.addEventListener('keydown', function(e) {
+            if (lightbox.style.display === 'flex') {
+                if (e.key === 'Escape') lightboxClose.onclick();
+                else if (e.key === 'ArrowLeft' && currentImageIndex > 0) lightboxPrev.onclick(e);
+                else if (e.key === 'ArrowRight') { // Allow if not last OR if more can be loaded
+                     const canLoadMoreKeyNav = (currentSearchQuery.format === 'gif' && GIPHY_API_KEY_HARDCODED) || 
+                                (currentSearchQuery.format !== 'gif' && UNSPLASH_API_KEY && currentSearchQuery.term);
+                    if(currentImageIndex < displayedImages.length - 1 || canLoadMoreKeyNav) {
+                        lightboxNext.onclick(e);
+                    }
+                }
+            }
+        });
+
+        lightbox.addEventListener('click', function(e) {
+            if (e.target === lightbox) lightboxClose.onclick();
+        });
+    </script>
+</body>
+</html>
